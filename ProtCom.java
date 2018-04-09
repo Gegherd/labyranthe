@@ -22,7 +22,7 @@ class ProtCom implements Runnable
     {
       while ((_strCommande=_br.readLine())!=null)
       {
-        System.out.println("hello");
+        //System.out.println("hello");
         if (_strCommande.equalsIgnoreCase("quit"))
           System.exit(0);
         else if(_strCommande.equalsIgnoreCase("total"))

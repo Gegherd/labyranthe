@@ -24,6 +24,7 @@ public class Serv
 	 		new ProtCom(serv);
 	 		ServerSocket ss = new ServerSocket(port.intValue());
 	 		welcome(port);
+
 	 		while(true){
 	 			System.out.println("bloc 1");
 	 			new ServiceServ(ss.accept(),serv);
@@ -42,7 +43,7 @@ public class Serv
 		System.out.println("Bienvenue dans le Labyranthe");
 	}
 
-	synchronized public void sendAll(String m,String last)
+	/*synchronized public void sendAll(String m,String last)
 	{
 		PrintWriter pw;
 		for (int i = 0;i<_tabClients.size();i++) 
@@ -54,7 +55,7 @@ public class Serv
 				pw.flush();
 			}	
 		}
-	}
+	}*/
 
 	synchronized public void delClient(int i)
 	{

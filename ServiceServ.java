@@ -11,6 +11,7 @@ public class ServiceServ implements Runnable
  	private BufferedReader _br;
  	private Serv _serv;
  	private int _nClient = 0;
+ 	private int _n = 0;
 
  	public ServiceServ(Socket s, Serv serv)
  	{
@@ -18,9 +19,12 @@ public class ServiceServ implements Runnable
  		_s = s;
  		try
 	 	{
-	 		_pw = new PrintWriter(new OutputStreamWriter(_s.getOutputStream()));
-	 		_br = new BufferedReader(new InputStreamReader(s.getInputStream()));
+	 		_pw = new PrintWriter(_s.getOutputStream());
+	 		_br = new BufferedReader(new InputStreamReader(_s.getInputStream()));
 	 		_nClient = serv.addClient(_pw);
+
+	 		_pw.print("GAMES "+_n+"***");
+ 			_pw.flush();
 	 	}
 	 	catch(Exception e)
 	 	{
@@ -33,12 +37,13 @@ public class ServiceServ implements Runnable
 
  	public void run()
  	{
- 		String mess = "";
+ 		
+ 		//String mess = "";
  		System.out.println("Connection du client "+ _nClient);
 		try
 	 	{
-	 		System.out.println("rentre dans le try");
-	 		char tabChar[] = new char[1];
+
+	 		/*char tabChar[] = new char[1];
 	 		while(_br.read(tabChar,0,1)!=-1)
 	 		{
 	 			
@@ -60,7 +65,8 @@ public class ServiceServ implements Runnable
 	 			}
 	 		}
 	 		System.out.print("message: "+tabChar[0]);
-	 		System.out.println("Outside of while");
+	 		System.out.println("Outside of while");*/
+	 		_pw.close();
 	 	}
 		catch(Exception e)
 	 	{
