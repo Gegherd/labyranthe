@@ -13,22 +13,13 @@ public class Service implements Runnable{
 	
 	Serveur serveur;
 	Socket socket; 
+	String id_client="";
 
-	//private String tcp_adresse;
-
-
- 
- 	/**
- 	 * Constructeur de la classe
- 	 * @param s
- 	 * @param liste
- 	 */
  	public Service(Socket s, Serveur serv){
  		this.socket=s;
  		this.serveur=serv;
 
  	}
-
 
 	
 	/**
@@ -91,7 +82,7 @@ public class Service implements Runnable{
 	 *  qu'il n'est inscrit à aucune partie
 	 */
 	public String MessageDUNNO(){
-		String msg ="";
+		String msg ="DUNNO***";
 		 
 		return msg;
 	}
@@ -116,9 +107,8 @@ public class Service implements Runnable{
 	 * @param m : indique le numéro de la partie
 	 * @param s : indique le nombre de joueurs
 	 */
-	public String MessageLIST_EX(int m, int s){
-		String msg ="";
-		 
+	public String MessageLIST(int m, int s){
+		String msg ="LIST! "+ m+ " " + s +"***";
 		return msg;
 	}
 	
@@ -129,7 +119,7 @@ public class Service implements Runnable{
 	 * @param id : indique l'identifiant du joueur
 	 */
 	public String MessagePLAYER(String id){
-		String msg ="";
+		String msg ="PLAYER "+ id +"***";
 		 
 		return msg;
 	}
@@ -278,17 +268,61 @@ public class Service implements Runnable{
 
 	//Cherche si un joueur est inscrit dans une partie 
 	public int searchPartie(String id_client){
-		int partie=0;
+		int partie=-1;
 		ListIterator<Partie> li=serveur.listParties.listIterator(0);
 			while(li.hasNext()){
 				Partie p=li.next();
 				boolean client =p.isInList(id_client);
 				if(client==true){
 					partie=p.numPartie;
-					System.out.println("Joueur " + id_client+" trouver dans la partie " + p.numPartie);
+					//System.out.println("Joueur " + id_client+" trouver dans la partie " + p.numPartie);
 				}			
 			}
 		return partie;
+	}
+
+	//Retourne la partie auquel est inscrit le joueur 
+	public Partie Partie_joueur(String id_client){
+		Partie partie=null;
+
+		ListIterator<Partie> li=serveur.listParties.listIterator(0);
+			while(li.hasNext()){
+				Partie p=li.next();
+				boolean client =p.isInList(id_client);
+				if(client==true){
+					partie=p;
+					//System.out.println("Joueur " + id_client+" trouver dans la partie " + p.numPartie);
+				}			
+			}
+		return partie;
+	}
+
+
+	//retourne True si tous les joueurs d'une partie on fait START
+	public boolean Joueurs_Start(){
+		ListIterator<Joueur> li=serveur.listJoueurs.listIterator(0);
+			while(li.hasNext()){
+				Joueur j=li.next();
+				if(j.online==false){
+					return false;
+				}
+			}
+		return true;
+	}
+
+	//Lancer une nouvelle partie
+	public void Lancer_Partie(Partie p){
+		boolean start=Joueurs_Start(); 
+		if (start == true){
+		/*	Thread th = new Thread(p);
+			th.start(); 		
+			threads.add(th); */
+			System.out.println("Tous les joueurs de la partie ont fait START. La partie " + p.numPartie +" peut commencer.");
+			//On lance un nouveau Thread
+		} else {
+			System.out.println("Il manque des joueurs pour commencer la partie numero " + p.numPartie);
+
+		}			
 	}
 	
 	
@@ -302,12 +336,11 @@ public void AnalyseMessage (String mess,Joueur j) throws IOException{
 	String [] mess_array; //Tableau contenant le message envoyer par le client
 	String reponse = ""; //Reponse du serveur
 	int num_partie;
-	String id_client="";
 	int port_udp_client;
 	Joueur current=null;
-	
-	mess_array = mess.split(" ");
-	//Supprimer les *** ? 
+	String mess_clean= mess.replace("***", "");
+	//System.out.println("Message clean = " + mess_clean);
+	mess_array = mess_clean.split(" ");
 
 	PrintWriter pw = new PrintWriter(new OutputStreamWriter(this.socket.getOutputStream()));
 	
@@ -324,7 +357,11 @@ public void AnalyseMessage (String mess,Joueur j) throws IOException{
 			System.out.println(id_client + " demande la creation d'une nouvelle partie \n ");
 			try{
 				port_udp_client = Integer.parseInt(mess_array[2]);
+				j.portUDP=port_udp_client;
+				//System.out.println("Port UDP du client : " + j.portUDP);
 			} catch (NumberFormatException e){
+				pw.println("REGNO***");
+				pw.flush();
 				System.out.println("Erreur dans le format de la commande");
 				break;
 			}
@@ -333,7 +370,8 @@ public void AnalyseMessage (String mess,Joueur j) throws IOException{
 			Partie p=new Partie();
 			serveur.listParties.add(p);
 			serveur.nbr_parties++;
-			System.out.println("Creation d'une nouvelle partie reussie. \n id de la partie = "+ p.numPartie);
+			j.partie=p.numPartie;
+		//	System.out.println("Creation d'une nouvelle partie reussie. \n id de la partie = "+ p.numPartie);
 			p.addJoueur(j); //Ajouter le joueur a la liste des joueurs de la partie
 		/*	for(int i = 0; i < serveur.listParties.size(); i++){
 
@@ -341,7 +379,7 @@ public void AnalyseMessage (String mess,Joueur j) throws IOException{
   			}*/
 
 			j.partie=p.numPartie; //Maj du num de la partie auquel le joueur est inscrit
-			System.out.println("Ajout du joueur a la liste des joueurs de la partie : " + j.partie);
+			//System.out.println("Ajout du joueur a la liste des joueurs de la partie : " + j.partie);
 			//Si l'inscription a la partie est ok 
 			reponse = MessageREGOK(p.numPartie);
 			//System.out.println("Rep du serveur = " + reponse);
@@ -360,8 +398,9 @@ public void AnalyseMessage (String mess,Joueur j) throws IOException{
 				pw.flush();
 				break;
 			}
+
 			id_client=mess_array[1];	
-			ListIterator<Joueur> lij=serveur.listJoueurs.listIterator(0);
+			/*ListIterator<Joueur> lij=serveur.listJoueurs.listIterator(0);
 			while(lij.hasNext()){
 				Joueur jo=lij.next();
 				//System.out.println(jo.id);
@@ -369,92 +408,198 @@ public void AnalyseMessage (String mess,Joueur j) throws IOException{
 					current=jo;
 				}
 			}
-			//System.out.println(current.toString());
+			//System.out.println(current.toString()); */
 
 			//Recuperer le num de port et le num de partie
 			try{
 				port_udp_client = Integer.parseInt(mess_array[2]);
-				System.out.println("Port UDP du client :"+ port_udp_client);
+				j.portUDP=port_udp_client;
 				num_partie= Integer.parseInt(mess_array[3]);
-				System.out.println("Num de la partie demandee:"+ num_partie);
 
 			} catch (NumberFormatException e){
-				System.out.println("Erreur dans le format de la commande");
+				pw.println("REGNO***");
+				pw.flush();				
 				break;
 			}	
 
+			boolean partie_trouvee=false;
 			//Chercher la partie correspondant dans la linkedlist
 			ListIterator<Partie> li=serveur.listParties.listIterator(0);
 			while(li.hasNext()){
 				Partie pt=li.next();
-				System.out.println(pt.numPartie);
+
 				if(pt.numPartie==num_partie){ //Si on trouve une partie dans la liste avec le même id que celui envoyé par le client
 					
-					if(current !=null){
-					pt.addJoueur(current);
-					System.out.println("Le joueur " + current.id + " a ete inscrit a la partie "+ pt.numPartie);
-					}
+					partie_trouvee=true;
+					if(j.partie == (-1)){ //Si le joueur n'est inscrit a aucune partie
+						
+						if(partie_trouvee==true){ //Si la partie demandee existe 
+							pt.addJoueur(j);
+							System.out.println("Le joueur " + j.id + " au port UDP "+ j.portUDP + " a ete inscrit a la partie "+ pt.numPartie);
+							reponse = MessageREGOK(num_partie);
+							pw.println(reponse);
+							pw.flush();
+							break;
+						} 
+					} 
 				}
 			}
-			//Ajouter le joueur a la partie		
-			//Si l'inscription a la partie est ok
-			reponse = MessageREGOK(num_partie);
-			// else
-			//reponse=MessageREGNO();
+			reponse = MessageREGNO();
 			pw.println(reponse);
 			pw.flush();
 			break;
 
-
-
-		case "START***": //Start une partie - La partie commence quand tt les joueurs inscrits ont fait start
+		case "START": //Start une partie - La partie commence quand tt les joueurs inscrits ont fait start
 			if(mess_array.length!=1){
 				pw.println("Erreur format de la commande");
 				pw.flush();
 				break;
 			}
 
+			j.online=true;
+			Partie pa=Partie_joueur(j.id);
+			System.out.println("Le client a fait START : " + pa.toString());
+			//Le serveur ne repond rien
+			Lancer_Partie(pa);
+			//Tester si tous les joueurs de la partie ont fait START, si c'est le cas on lance la partie
 
+			break;
 
-
-		case "UNREG***": //Desinscription à une partie
-			try{
-				num_partie= Integer.parseInt(mess_array[1]);
-				System.out.println("Num de la partie :"+ num_partie);
-			} catch (NumberFormatException e){
-				System.out.println("Erreur dans le format de la commande");
+		case "UNREG": //Desinscription à une partie
+			if(mess_array.length!=1){
+				pw.println("Erreur format de la commande");
+				pw.flush();
 				break;
 			}
-			//Supprimer le joueur de la partie	
+
+			System.out.println(id_client);
+			num_partie = searchPartie(id_client); //On cherche le num de la partie auquel est connecte le client
+			
+			if(num_partie==-1){ //Si le joueur n'est inscrit a aucune partie
+				pw.println("DUNNO***");
+				pw.flush();
+				break;
+			}
+			System.out.println(id_client + " demande sa desincription a la partie "+ num_partie);
+
+				ListIterator<Partie> lit2=serveur.listParties.listIterator(0); //On parcourt la liste des parties pour envoyer en message up() a la bonne partie
+				while(lit2.hasNext()){
+					Partie pt=lit2.next();
+					if(pt.numPartie== num_partie){ 
+						j.partie=(-1);
+						pt.deleteJoueur(id_client); 			//Supprimer le joueur de la partie	
+					}
+				}
 			reponse = MessageUNREGOK(num_partie);
 			pw.println(reponse);
 			pw.flush();
 			break;
 			
 		case "SIZE?": //Taille du labyrinthe
+			if(mess_array.length!=2){
+				pw.println("Erreur format de la commande");
+				pw.flush();
+				break;
+			}
+			int taille=-1;
 			try{
 				num_partie= Integer.parseInt(mess_array[1]);
-				System.out.println("Num de la partie :"+ num_partie);
+				ListIterator<Partie> lit3=serveur.listParties.listIterator(0); //On parcourt la liste des parties 
+				while(lit3.hasNext()){
+				Partie par=lit3.next();
+					if(par.numPartie== num_partie){ 
+						//Recup la taille du labyrinthe
+						//taille = ...
+					}
+				}
+				if (taille==-1){ //Si le num de la partie demandee par le client n'existe pas
+					reponse = MessageDUNNO();
+					pw.println(reponse);
+					pw.flush();
+					break;
+				}
 			}catch (NumberFormatException e){
+				pw.println("Erreur format de la commande");
+				pw.flush();
 				System.out.println("Erreur dans le format de la commande");
 				break;
 			}
+
+
 		//	reponse = MessageSIZE_EX(num_partie);
 			pw.println(reponse);
 			pw.flush();
 			break;	
 
 		case "LIST?": //Nbr de joueurs inscrits dans la partie m
+
+			if(mess_array.length!=2){
+				pw.println("Erreur format de la commande");
+				pw.flush();
+				break;
+			}
+
+			String listejoueurs="";
+			int nbrjoueurs=-1; //Nombre de joueurs de la partie demandee
 			try{
-				num_partie= Integer.parseInt(mess_array[1]);
-				System.out.println("Num de la partie :"+ num_partie);
+
+				num_partie= Integer.parseInt(mess_array[1]); 
+				ListIterator<Partie> lit3=serveur.listParties.listIterator(0); //On parcourt la liste des parties 
+				while(lit3.hasNext()){
+				Partie par=lit3.next();
+					if(par.numPartie== num_partie){ 
+						listejoueurs=par.getListJoueurs();
+						nbrjoueurs=par.NBJoueurs;
+					}
+				}
+				if (nbrjoueurs==(-1)){ //Si le num de la partie demandee par le client n'existe pas
+					reponse = MessageDUNNO();
+					pw.println(reponse);
+					pw.flush();
+					break;
+				}
 			}catch (NumberFormatException e){
+				pw.println("Erreur format de la commande");
+				pw.flush();
 				System.out.println("Erreur dans le format de la commande");
 				break;
-			}		
+			}
+			//Envoi du msg LIST
+			reponse = MessageLIST(num_partie,nbrjoueurs);
+			pw.println(reponse);
+			pw.flush();
+
+			//Envoi de tt les msg PLAYER
+			String[] tab=listejoueurs.split(" ");
+			for(int i=0;i<tab.length;i++){
+				reponse = MessagePLAYER(tab[i]);
+				pw.println(reponse);
+				pw.flush();
+			}
+			break;
+
 		case "GAMES?": //Nbr de parties pour lesquels il y'a des joueurs inscrits
 			
+			//Envoi du msg GAMES
+			String resp="GAMES "+ serveur.nbr_parties + "***";
+			pw.println(resp);
+			pw.flush();
+
+			//Envoie des msg GAME
+			if(serveur.listParties.size()!=0){
+				ListIterator<Partie> list=serveur.listParties.listIterator(0);
+				while(list.hasNext()){
+					Partie pat=list.next();
+					resp=MessageGAME(pat.numPartie,pat.NBJoueurs);
+					//System.out.println("ENVOI DE GAME");
+					pw.println(resp);
+					pw.flush();
+					
+				}
+			}
+
 		case "UP":
+			String repU = "";
 			if(mess_array.length!=2){ //On teste que le format du message est bon
 				pw.println("Erreur format de la commande");
 				pw.flush();
@@ -463,36 +608,115 @@ public void AnalyseMessage (String mess,Joueur j) throws IOException{
 
 			try{
 				int deplacement= Integer.parseInt(mess_array[1]); //On recupere le deplacement demandé par le client
-				//System.out.println("deplacement :"+ deplacement);
 				int partie = searchPartie(id_client); //On cherche le num de la partie auquel est connecte le client
-				//System.out.println(partie); 
-
 				ListIterator<Partie> lit=serveur.listParties.listIterator(0); //On parcourt la liste des parties pour envoyer en message up() a la bonne partie
 				while(lit.hasNext()){
 					Partie pt=lit.next();
 					if(pt.numPartie== partie){ 
-						pt.Up(deplacement); //On envoie a la partie le num de deplacement que le client a demander
+						Joueur jou=pt.getJoueur(id_client);
+						repU =pt.Up(deplacement,jou); //On envoie a la partie le num de deplacement que le client a demander
+						pw.println(repU);
+						pw.flush();
+						break;
 					}
 				}
-
-				//Si le deplacement est autorise 
-				//...
-				//Sinon ...
 			}catch (NumberFormatException e){
+				pw.println("Erreur format de la commande");
+				pw.flush();
 				System.out.println("Erreur dans le format de la commande");
 				break;
 			}
-
-			
-			//Tester si il a fait un bon mouvement 
-			//getAnswer()
 			break;
+
 		case "DOWN":
-			
+			String repD = "";
+			if(mess_array.length!=2){ //On teste que le format du message est bon
+				pw.println("Erreur format de la commande");
+				pw.flush();
+				break;
+			}
+
+			try{
+				int deplacement= Integer.parseInt(mess_array[1]); //On recupere le deplacement demandé par le client
+				int partie = searchPartie(id_client); //On cherche le num de la partie auquel est connecte le client
+				ListIterator<Partie> lit=serveur.listParties.listIterator(0); //On parcourt la liste des parties pour envoyer en message up() a la bonne partie
+				while(lit.hasNext()){
+					Partie pt=lit.next();
+					if(pt.numPartie== partie){ 
+						Joueur jou=pt.getJoueur(id_client);
+						repD = pt.Down(deplacement,jou); //On envoie a la partie le num de deplacement que le client a demander
+						pw.println(repD);
+						pw.flush();
+						break;
+					}
+				}
+			}catch (NumberFormatException e){
+				pw.println("Erreur format de la commande");
+				pw.flush();
+				System.out.println("Erreur dans le format de la commande");
+				break;
+			}
+			break;
+
 		case "LEFT":
-			
+			String repL = "";
+			if(mess_array.length!=2){ //On teste que le format du message est bon
+				pw.println("Erreur format de la commande");
+				pw.flush();
+				break;
+			}
+
+			try{
+				int deplacement= Integer.parseInt(mess_array[1]); //On recupere le deplacement demandé par le client
+				int partie = searchPartie(id_client); //On cherche le num de la partie auquel est connecte le client
+				ListIterator<Partie> lit=serveur.listParties.listIterator(0); //On parcourt la liste des parties pour envoyer en message up() a la bonne partie
+				while(lit.hasNext()){
+					Partie pt=lit.next();
+					if(pt.numPartie== partie){ 
+						Joueur jou=pt.getJoueur(id_client);
+						repL=pt.Left(deplacement,jou); //On envoie a la partie le num de deplacement que le client a demander
+						pw.println(repL);
+						pw.flush();
+						break;
+					}
+				}
+			}catch (NumberFormatException e){
+				pw.println("Erreur format de la commande");
+				pw.flush();
+				System.out.println("Erreur dans le format de la commande");
+				break;
+			}
+			break;
+
 		case "RIGHT":
-			
+			String repR = "";
+			if(mess_array.length!=2){ //On teste que le format du message est bon
+				pw.println("Erreur format de la commande");
+				pw.flush();
+				break;
+			}
+
+			try{
+				int deplacement= Integer.parseInt(mess_array[1]); //On recupere le deplacement demandé par le client
+				int partie = searchPartie(id_client); //On cherche le num de la partie auquel est connecte le client
+				ListIterator<Partie> lit=serveur.listParties.listIterator(0); //On parcourt la liste des parties pour envoyer en message up() a la bonne partie
+				while(lit.hasNext()){
+					Partie pt=lit.next();
+					if(pt.numPartie== partie){ 
+						Joueur jou=pt.getJoueur(id_client);
+						repR=pt.Right(deplacement,jou); //On envoie a la partie le num de deplacement que le client a demander
+						pw.println(repR);
+						pw.flush();
+						break;
+					}
+				}
+			}catch (NumberFormatException e){
+				pw.println("Erreur format de la commande");
+				pw.flush();
+				System.out.println("Erreur dans le format de la commande");
+				break;
+			}
+			break;
 		case "QUIT":
 			
 		case "GLIST?":
@@ -501,13 +725,10 @@ public void AnalyseMessage (String mess,Joueur j) throws IOException{
 			
 		case "SEND":
 
-		// case lancer : partie.encours=true; 
-
 		default :
-		System.out.println("Commande non reconnue");
-		break;
-
-		// envoyer au client un message " ERROR "
+			pw.println("Commande non reconnue");
+			pw.flush();
+			break;
 			
 	}
 	//pw.close();
@@ -526,9 +747,21 @@ public void run(){
 			
 			//Creation du nouveau joueur
 			String id= br.readLine();
+
+			//Tester si l'identififiant est unique
+			for(int i = 0; i < serveur.listJoueurs.size(); i++){
+				if( id.equals(serveur.listJoueurs.get(i).id) ){
+					pw.println("Identifiant deja pris.");
+					pw.flush();
+					id=br.readLine();
+				} 
+  			}
+
 			String ip=(socket.getInetAddress().getHostName());
+			//Le client choisit son port et on teste si il est free
 			Joueur j=new Joueur(id,ip); 
 			serveur.listJoueurs.add(j);
+
 			/*for(int i = 0; i < serveur.listJoueurs.size(); i++){
 
       			System.out.println("Élément à l'index " + i + " = " + serveur.listJoueurs.get(i));
@@ -551,25 +784,19 @@ public void run(){
 					pw.flush();
 					
 				}
-			} else {
-				pw.println("Aucune partie");
-				pw.flush();
-			}
-			
+			} 
 
 			while(!stop){
 				
 				String mess = br.readLine();
-				System.out.println("Message recu du client : " + mess);
+				System.out.println("Message recu de " + j.id + " : " + mess);
 				if(mess == null){
 					stop=true;
 					break;
 				}
+
 				//Analyser le message et répondre au client
 				AnalyseMessage(mess,j);
-
-
-				// if msg== START le serveur ne repond pas
 
 			}
 

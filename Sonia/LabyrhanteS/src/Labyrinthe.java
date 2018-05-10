@@ -8,14 +8,11 @@ public class Labyrinthe{
 	
 	public static int sx;
 	public static int sy;
-	public static int tab[][];
+	//public static int tab[][];
 
-	public static void writeInit(int t [][]){ //Creer un fichier avec le labyrinthe
-		sx = t.length;
-		sy = t[0].length;
-		tab = new int[sx][sy];
+	public static void writeInit(int t [][],int numPartie){ //Creer un fichier avec le labyrinthe
 		try{
-			PrintWriter pw = new PrintWriter("maze.txt");
+			PrintWriter pw = new PrintWriter("maze"+numPartie+".txt");
 			for (int i =0;i<t.length;i++){
 				for (int j=0;j<t[i].length;j++){
 					pw.print(t[i][j]);
@@ -31,11 +28,11 @@ public class Labyrinthe{
 		}
 	}
 
-	public static void update(){ //Maj du coup du joueur dans le fichier
+	public static void update(int numPartie,int tab[][]){ //Maj du coup du joueur dans le fichier
 		//tab[x2][y2] = 1;
 		//tab[x1][y1] = 2;
 		try{
-			PrintWriter pw = new PrintWriter("maze.txt");
+			PrintWriter pw = new PrintWriter("maze"+numPartie+".txt");
 			for (int i =0;i<tab.length;i++){
 				for (int j=0;j<tab[i].length;j++){
 					pw.print(tab[i][j]);
@@ -51,16 +48,16 @@ public class Labyrinthe{
 		}
 	}
 
-	public static void createTab(){ //Prends le fichier texte et creer un tab
+	public static void createTabSec(int tab1[][],int numPartie,int tab2[][]){ //Prends le fichier texte et creer un tab
 		try {
-      		FileInputStream fis = new FileInputStream("maze.txt");
+      		FileInputStream fis = new FileInputStream("maze"+numPartie+".txt");
       		char current;
       		int i=0 ,j=0;
       		while (fis.available() > 0) {
         		current = (char) fis.read();
         		if (current!='\n') {
         			//System.out.print(current);
-        			tab[i][j] = current - '0';
+        			tab2[i][j] = current - '0';
         			j++;
         		}
         		else{
@@ -74,9 +71,9 @@ public class Labyrinthe{
     	}
 	}
 
-	public static void read(){
+	public static void read(int numPartie){
 		try {
-      		FileInputStream fis = new FileInputStream("maze.txt");
+      		FileInputStream fis = new FileInputStream("maze"+numPartie+".txt");
       		char current;
       		int i ,j;
       		while (fis.available() > 0) {

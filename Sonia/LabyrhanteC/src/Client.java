@@ -31,7 +31,7 @@ class Client {
 
 	private static String SVR; 						// stocke le nom ou l'adresse IP du serveur
 	public  static int TCPPort_SVR ; 				// stocke le port d'écoute du serveur
-
+	public int nbr_prochain_msg=0;
 	
 	/**
 	 * Constructeur de la classe
@@ -59,11 +59,10 @@ class Client {
 	 *  Demande à l'utilisateur d'introduire les données pour configurer la machine Serveur
 	 */
 	public static void GetConfigServer(){
-		
+
 	 // Lire les entrées utilisateurs pour le nom ou l'adresse et le port
 		
 	//Temporairement et pour teste les fixe
-		
 		TCPPort_SVR = 6262;
 		SVR = "127.0.0.1";
 	};
@@ -75,60 +74,93 @@ class Client {
 	 * @param mess : message reçu de chez le serveur
 	 * @throws IOException
 	 */
-	private void AnalyseMessage (String mess) throws IOException{
-	String [] mess_array;
-	
-	mess_array = mess.split(" ");
+	public String AnalyseMessage(String mess, Socket socket) throws IOException{
+		String [] mess_array;
+		String rep="";
 
-	PrintWriter pw = new PrintWriter(new OutputStreamWriter(this.socket.getOutputStream()));
-	
-	switch(mess_array[0]){
+		//mess_array = mess.split(" ");
+		String mess_clean= mess.replace("***", "");
+		//System.out.println("Message clean = " + mess_clean);
+		mess_array = mess_clean.split(" ");
 
-		case "GAMES":
-			
-		case "GAME":
-		
-		case "REGOK":
-		
-		case "REGNO":
-			
-		case "UNREGOK":
-			
-		case "DUNNO":
-			
-		case "SIZE!":
-			
-		case "LIST!":
-			
-		case "PLAYER":
-			// 2 cas selon le nombre de paramètres après la commande
-			
-		case "WELCOME":
-			
-		case "RIGHT":
-			
-		case "MOV":
-			
-		case "MOF":
-			
-		case "BYE":
-			
-		case "GLIST!":
-			
-		case "ALL!":
-			
-		case "SEND!":
-			
-		case "NOSEND":
-			
-			
-		default :
-		// envoyer au client un message " ERROR "
-			
+		PrintWriter pw = new PrintWriter(new OutputStreamWriter(socket.getOutputStream()));
+		BufferedReader br=new BufferedReader(new InputStreamReader(socket.getInputStream()));
+
+		switch(mess_array[0]){
+
+			case "GAMES":
+				try{
+					String s;
+					nbr_prochain_msg= Integer.parseInt(mess_array[1]);
+					//System.out.println("Nombre de msg attendus du serveur :"+ nbr_prochain_msg);
+					for (int i=1;i<=nbr_prochain_msg;i++){
+						//System.out.println("entree");
+						s=br.readLine();
+						System.out.println(s);
+					}
+					break;
+				}catch (NumberFormatException e){
+					System.out.println("Erreur dans le format de la commande");
+					break;
+				}
+				
+			case "GAME":
+				break;
+			case "REGOK":
+				break;
+			case "REGNO":
+				break;
+			case "UNREGOK":
+				break;
+			case "DUNNO":
+				break;
+			case "SIZE!":
+				break;
+			case "LIST!":
+				try{
+					String s;
+					nbr_prochain_msg= Integer.parseInt(mess_array[2]);
+					System.out.println("Nombre de msg attendus du serveur :"+ nbr_prochain_msg);
+					for (int i=1;i<=nbr_prochain_msg;i++){
+						//System.out.println("entree");
+						s=br.readLine();
+						System.out.println(s);
+					}
+				}catch (NumberFormatException e){
+					System.out.println("Erreur dans le format de la commande");
+					break;
+				}
+				break;
+				
+			case "PLAYER":
+				// 2 cas selon le nombre de paramètres après la commande
+				break;
+			case "WELCOME":
+				break;
+			case "RIGHT":
+				break;
+			case "MOV":
+				break;
+			case "MOF":
+				break;
+			case "BYE":
+				break;
+			case "GLIST!":
+				break;
+			case "ALL!":
+				break;
+			case "SEND!":
+				break;
+			case "NOSEND":
+				break;
+
+			default :
+
+			return rep;		
+		}
+	
+	return rep;
 	}
-	
-	}		
-
 	
 	
 	
@@ -161,11 +193,24 @@ class Client {
 
 			//Récupérer la réponse du Serveur à notre demande de connection
 			String mess=br.readLine();
-			System.out.println("Messages recus du serveur :\n "+mess);
+			System.out.println(mess);
+
+			while(mess.equals("Identifiant pris.")){
+				System.out.println("Choissisez votre identifiant svp : ");
+				idclient=sc.nextLine();
+				clt = initClient(idclient,socket.getLocalPort());				// Initialise les informations id et numéro de port UDP du client
+				pw.println(idclient); 
+				pw.flush();
+				mess=br.readLine();
+
+			}	
+			//mess=br.readLine();
+			//System.out.println("Messages recus du serveur :\n "+mess);
+			clt.AnalyseMessage(mess,socket);
 			boolean fini=true;
-			String line = br.readLine();
+			//String line = br.readLine();
 			//Faire une boucle pour recevoir tt les msg GAME
-			System.out.println(line);
+			//System.out.println(line);
 
 		    /*while (line != null) {
 		        System.out.println(line);
@@ -180,10 +225,11 @@ class Client {
 					String str=sc.nextLine();
 					pw.println(str);
 					pw.flush();
-					System.out.println("Message envoyé au serveur. \n");
+					//System.out.println("Message envoyé au serveur. \n");
 					
 					mess=br.readLine();
 					System.out.println("Message recu :"+mess +"\n");
+					clt.AnalyseMessage(mess,socket);
 					if(str.equals("Close")){
 						fini=false;
 					}

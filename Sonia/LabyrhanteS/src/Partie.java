@@ -8,19 +8,19 @@ import java.util.*;
  */
 
 
-public class Partie {
+public class Partie implements Runnable{
 	
-//	private static final long serialVersionUID = 5464055556436257037L;
-	
-	//public String ip; 							//adresse ip de la partie
+	private String rep;						// Reponse donner au joueur
+	public String ip; 						//Adresse ip de la partie
+	public int port;						//Port de multidiffusion de la partie	
+	private int tabP[][];
 	public int numPartie;						//Numéro de la partie 
 	public int NBJoueurs;						//Nbre de joueurs inscrits
 	public ArrayList<Joueur> listJoueurs;		//Liste des joueurs inscrits à la partie
-	public Labyrinthe laby;						//Labyrinthe associé à la Partie
+	public Labyrinthe maze;						//Labyrinthe associé à la Partie
 	public boolean Encours;						// Statut de la partie : Encours=true -> Partie démarée sinon la Partie n'est pas encore lancée
 	public Thread th;							// Thread associé à la partie
 	
-	public int port;						//Port de la partie	
 	public static int id_partie=0;
 
 	//Methode pour generer un entier unique 
@@ -37,7 +37,18 @@ public class Partie {
 		this.Encours=false;
 		this.NBJoueurs=0;
 		listJoueurs=new ArrayList<Joueur>();
-
+		//Genix
+		maze = new Labyrinthe();
+		int tab[][]={
+			{2,0,0,0},
+			{1,1,1,0},
+			{0,0,1,0},
+			{0,0,1,3}
+			};
+		this.tabP = new int[tab.length][tab[0].length];
+		maze.writeInit(tab,numPartie);
+		maze.createTabSec(tab,numPartie,this.tabP);
+		//*/
 	}
 
 
@@ -53,22 +64,214 @@ public class Partie {
 		return false;
 	}
 
+	public void sendUDP(String id, String msg){
+
+	}
+
+	//Retourne le joueur inscrit dans la partie avec l'identifiant id
+	public Joueur getJoueur(String id_client){
+		Joueur jo=null;
+		ListIterator<Joueur> li=this.listJoueurs.listIterator(0);
+			while(li.hasNext()){
+				Joueur j=li.next();
+				if(j.id.equals(id_client)){
+					return j;
+				}
+			}
+		return jo;
+	}
 	
-	//Ajoute un joueur a la partie
+	//Inscrire un joueur a la partie
 	public void addJoueur(Joueur j){
 		this.listJoueurs.add(j);
 		this.NBJoueurs++;
 	}
 
+
+	//Desinscrire un joueur a la partie
+	public void deleteJoueur(String id_client){
+		Joueur jo=getJoueur(id_client);
+		this.listJoueurs.remove(jo);
+		this.NBJoueurs--;
+	}
+
+	//Retourne la liste de tous les joueurs inscrits a une partie
+	public String getListJoueurs(){
+		String rep="";
+		ListIterator<Joueur> li=this.listJoueurs.listIterator(0);
+			while(li.hasNext()){
+				Joueur j=li.next();
+				rep+=j.id;
+				rep+=" ";
+			}
+		System.out.println("Liste des joueurs de la partie : " + rep);
+		return rep;
+	}
+
+
 	//Pour le Up 
-	public String Up(int deplacement){
+	public String Up(int deplacement, Joueur j){
 		String rep="";
 
 		System.out.println("Demande un deplacement de :" + deplacement);
-		//Tester si le deplacement est autorise et si c'est ok faire la mise a jour
+				//Tester si le deplacement est autorise et si c'est ok faire la mise a jour
+				//Test d'ajout de Genix 09/05/18
+				//Comment avoir la position du joueur concerné?
+			try{
+				if(this.tabP[j.x-deplacement][j.y] == 0){
+					rep= "Vous avez touché un mur!!!\n";
+				}
+				else if (this.tabP[j.x-deplacement][j.y] == 8){
+					rep="Bien joué, vous avez attrapé un fantôme!\n";
+					this.tabP[j.x][j.y]=1;
+					maze.update(numPartie,this.tabP);
+					j.x-= deplacement;
+					this.tabP[j.x][j.y]=2;
+					maze.update(numPartie,this.tabP);
+					j.points+=10;
+					rep="MOF "+j.x+" "+j.y+" "+j.points+"***\n";
+				}
+				else if (this.tabP[j.x-deplacement][j.y] == 1){
+					rep="Rien à signaler, vous avez avancé!\n";
+					this.tabP[j.x][j.y]=1;
+					maze.update(numPartie,this.tabP);
+					j.x-= deplacement;
+					this.tabP[j.x][j.y]=2;
+					rep="MOV "+j.x+" "+j.y+"***\n";
+				}
+			}
+			catch(Exception e){
+				rep="En dehors de la zone du labyrinthe!\n";
+			}
+				//*/
+			//rep= "OK";
+			return rep;
+	}
+
+	public String Down(int deplacement, Joueur j){
+		String rep="";
+		display(this.tabP);
+		System.out.println("Demande un deplacement de :" + deplacement);
+				//Tester si le deplacement est autorise et si c'est ok faire la mise a jour
+				//Test d'ajout de Genix 09/05/18
+				//Comment avoir la position du joueur concerné?
+			try{
+				if(this.tabP[j.x+deplacement][j.y] == 0){
+					rep= "Vous avez touché un mur!!!\n";
+				}
+				else if (this.tabP[j.x+deplacement][j.y] == 8){
+					this.tabP[j.x][j.y]=1;
+					maze.update(numPartie,this.tabP);
+					j.x+= deplacement;
+					this.tabP[j.x][j.y]=2;
+					maze.update(numPartie,this.tabP);
+					j.points+=10;
+					rep="MOF "+j.x+" "+j.y+" "+j.points+"***\n";
+				}
+				else if (this.tabP[j.x+deplacement][j.y] == 1){
+					this.tabP[j.x][j.y]=1;
+					maze.update(numPartie,this.tabP);
+					j.x+= deplacement;
+					this.tabP[j.x][j.y]=2;
+					rep="MOV "+j.x+" "+j.y+"***\n";
+				}
+			}
+			catch(Exception e){
+				rep="En dehors de la zone du labyrinthe!\n";
+			}
+				//*/
+		display(this.tabP);
+			//rep= "OK";
 		return rep;
 	}
 	
+	public String Right(int deplacement, Joueur j){
+		String rep="";
+		display(this.tabP);
+		System.out.println("Demande un deplacement de :" + deplacement);
+				//Tester si le deplacement est autorise et si c'est ok faire la mise a jour
+				//Test d'ajout de Genix 09/05/18
+				//Comment avoir la position du joueur concerné?
+			try{
+				if(this.tabP[j.x][j.y+deplacement] == 0){
+					rep= "Vous avez touché un mur!!!\n";
+				}
+				else if (this.tabP[j.x][j.y+deplacement] == 8){
+					rep="Bien joué, vous avez attrapé un fantôme!\n";
+					this.tabP[j.x][j.y]=1;
+					maze.update(numPartie,this.tabP);
+					j.y+= deplacement;
+					this.tabP[j.x][j.y]=2;
+					maze.update(numPartie,this.tabP);
+					j.points+=10;
+					rep="MOF "+j.x+" "+j.y+" "+j.points+"***\n";
+				}
+				else if (this.tabP[j.x][j.y+deplacement] == 1){
+					rep="Rien à signaler, vous avez avancé!\n";
+					this.tabP[j.x][j.y]=1;
+					maze.update(numPartie,this.tabP);
+					j.y+= deplacement;
+					this.tabP[j.x][j.y]=2;
+					rep="MOV "+j.x+" "+j.y+"***\n";
+				}
+			}
+			catch(Exception e){
+				rep="En dehors de la zone du labyrinthe!\n";
+			}
+				//
+			//rep= "OK";
+			display(this.tabP);
+			return rep;
+	}
+
+	public String Left(int deplacement, Joueur j){
+		String rep="";
+		display(this.tabP);
+		System.out.println("Demande un deplacement de :" + deplacement);
+				//Tester si le deplacement est autorise et si c'est ok faire la mise a jour
+				//Test d'ajout de Genix 09/05/18
+				//Comment avoir la position du joueur concerné?
+			try{
+				if(this.tabP[j.x][j.y-deplacement] == 0){
+					rep= "Vous avez touché un mur!!!\n";
+				}
+				else if (this.tabP[j.x][j.y-deplacement] == 8){
+					rep="Bien joué, vous avez attrapé un fantôme!\n";
+					this.tabP[j.x][j.y]=1;
+					maze.update(numPartie,this.tabP);
+					j.y-= deplacement;
+					this.tabP[j.x][j.y]=2;
+					maze.update(numPartie,this.tabP);
+					j.points+=10;
+					rep="MOF "+j.x+" "+j.y+" "+j.points+"***\n";
+				}
+				else if (this.tabP[j.x][j.y-deplacement] == 1){
+					rep="Rien à signaler, vous avez avancé!\n";
+					this.tabP[j.x][j.y]=1;
+					maze.update(numPartie,this.tabP);
+					j.y-= deplacement;
+					this.tabP[j.x][j.y]=2;
+					rep="MOV "+j.x+" "+j.y+"***\n";
+				}
+			}
+			catch(Exception e){
+				rep="En dehors de la zone du labyrinthe!\n";
+			}
+				//
+			//rep= "OK";
+			display(this.tabP);
+			return rep;
+	}
+	
+	public static void display(int tab[][]){ //Test pour afficher le tabP
+		for (int i = 0;i<tab.length;i++) {
+			for (int j = 0;j<tab[i].length;j++) {
+				System.out.print(tab[i][j]);
+			}
+			System.out.print("\n");
+		}
+		System.out.println("");
+	}
 
 	public String toString(){
 		return ("Partie numero "+ this.numPartie + " avec "+ this.NBJoueurs + " joueurs.");
@@ -107,4 +310,9 @@ public class Partie {
 		//On lui repond
 		return rep;
 	}*/
+	public void run(){
+		while(true){
+
+		}
+	}
 }
